@@ -1,0 +1,26 @@
+# Evidence workflow for the Windows validator PR. Lives only in the fork.
+name: validators
+on:
+  push:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Report symlink and no-follow capability
+        shell: bash
+        run: |
+          node -e 'const fs=require("fs"),os=require("os"),p=require("path");const d=fs.mkdtempSync(p.join(os.tmpdir(),"cap-"));const t=p.join(d,"t");fs.writeFileSync(t,"x");let s="created";try{fs.symlinkSync(t,p.join(d,"l"),"file")}catch(e){s=e.code}console.log(JSON.stringify({platform:process.platform,node:process.version,O_NOFOLLOW:fs.constants.O_NOFOLLOW,fileSymlink:s}))'
+      - name: Validator tests
+        working-directory: skills/security-audit
+        run: node --test --test-reporter=spec
